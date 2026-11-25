@@ -112,6 +112,115 @@ matchExpressions:
 
 
 
-# Taints and Tolerations vs Node Affinity
+# Taints and Tolerations vs Node Affinity, Resource Requirements
+1. Combination of using Taints, Tolerations, and Node Affinity can assign pods to particular nodes
+
+2. Resource Requests (minimum), Limits (maximum), add resources: requests: ... and limits: ... to the Pod spec.containers, e.g.
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: simple-webapp-color
+  labels:
+    name: simple-webapp-color
+spec:
+  containers:
+    - name: simple-webapp-color
+      image: simple-webapp-color
+      ports:
+        - containerPort: 8080
+      resources:
+        requests:
+          memory: "1Gi"
+          cpu: "2"
+        limits:
+          memory: "2Gi"
+          cpu: "2"
+---
+
+3. LimitRanges can be used for all pods in a particular namespace, e.g.
+---
+apiVersion: v1
+kind: LimitRange
+metadata:
+  name: cpu-resource-constraint
+spec:
+  limits:
+    - type: Container
+      default:
+        cpu: 500m
+      defaultRequest:
+        cpu: 500m
+      max:
+        cpu: "1"
+      min:
+        cpu: 100m
+---
+apiVersion: v1
+kind: LimitRange
+metadata:
+  name: memory-resource-constraint
+spec:
+  limits:
+    - type: Container
+      default:
+        memory: 1Gi
+      defaultRequest:
+        memory: 1Gi
+      max:
+        memory: 1Gi
+      min:
+        memory: 500Mi
+---
+
+4. ResourceQuota can be used to limit the total resources in a namespace, e.g.
+---
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: my-resource-quota
+spec:
+  hard:
+    requests.cpu: "4"
+    requests.memory: "4Gi"
+    limits.cpu: "10"
+    limits.memory: "10Gi"
+---
+
+5. Use kubectl describe pod <pod-name> to check the resources of a pod
+kubectl describe pod rabbit
+
+6. Check the YAML configuration
+kubectl get pod <pod-name> -n <namespace> -o yaml
+kubectl get pod <pod-name> -n <namespace> -o yaml > <pod-manifest>.yaml
+
+kubectl get pod rabbit -n default -o yaml
+kubectl get pod rabbit -n default -o yaml > rabbit-pod.yaml
 
 
+
+# DaemonSets
+kubectl get daemonsets
+kubectl get daemonsets --all-namespaces
+kubectl create -f daemonset-name.yaml
+kubectl describe daemonset daemonset-name
+
+
+# Static Pods
+
+
+
+# Priority Classes
+
+
+
+# Multiple Schedulers
+
+
+# Configuring Scheduler Profiles
+
+
+# Admission Controllers
+
+
+# Validating and Mutating Admission Controllers
