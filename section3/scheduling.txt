@@ -1,0 +1,117 @@
+Section 3
+# Manual Scheduling
+1. Add the nodeName: node-name to the Pod spec, e.g.
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: nginx
+  labels:
+    name: nginx
+spec:
+  containers:
+  - name: nginx
+    image: nginx
+    ports:
+    - containerPort: 8080
+  nodeName: node02
+---
+
+
+
+# Labels and Selectors
+1. Add labels with the key: value pairs in the metadata of the Pod manifest file, e.g.
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: simple-webapp
+  labels:
+    app: app1
+    function: front-end
+spec:
+  containers:
+    - name: simple-webapp
+      image: simple-webapp
+      ports:
+        - containerPort: 8080
+---
+
+2. Use kubectl to add labels
+kubectl label pods <pod-name> env=prod tier=backend version=1.2
+
+3. Select labeled objects
+kubectl get pods --selector app=app1
+kubectl get pods -l app=app1,function=front-end
+
+
+
+# Taints and Tolerations
+1. Add a taint to a node
+kubectl taint nodes <node-name> <key>=<value>:<effect>
+kubectl taint node node1 app=blue:NoSchedule
+
+2. Delete a taint from a node
+kubectl taint node node1 app=blue:NoSchedule-
+
+3. Check taints
+kubectl describe node node1 | grep Taints
+
+
+
+# Node Selectors
+1. Add nodeSelector: key: value to the Pod manifest file, e.g.
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: myapp-pod
+spec:
+  containers:
+    - name: data-processor
+      image: data-processor
+  nodeSelector:
+    size: large
+---
+
+2. Add a label to the node
+kubectl label nodes node01 size=large
+
+3. Verify the label
+kubectl get node node01 --show-labels
+
+
+
+# Node Affinity
+1. Add affinity to the Pod manifest file, e.g.
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: myapp-pod
+spec:
+  containers:
+    - name: data-processor
+      image: data-processor
+  affinity:
+    nodeAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+        nodeSelectorTerms:
+          - matchExpressions:
+              - key: size
+                operator: In
+                values:
+                  - Large
+---
+
+If only a key is used without a value, the operator is set to Exists, e.g.
+
+matchExpressions:
+  - key: size
+    operator: Exists
+
+
+
+# Taints and Tolerations vs Node Affinity
+
+
