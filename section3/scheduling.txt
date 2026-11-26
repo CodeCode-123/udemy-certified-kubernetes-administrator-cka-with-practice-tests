@@ -206,15 +206,56 @@ kubectl create -f daemonset-name.yaml
 kubectl describe daemonset daemonset-name
 
 
+
 # Static Pods
+1. Find the static pods
+kubectl get pods --all-namespaces //the name ends with -node-name
+kubectl describe pods -A | grep -E "^Name:|^Namespace:|Controlled By:" //the static pods are controlled by "Node/node-name"
+
+2. Find the path holding static pod manifests
+ps aux | grep kubelet //find the --config flag and path, usually /var/lib/kubelet/config.yaml, or find the pod-manifest-path
+grep -i staticPodPath /var/lib/kubelet/config.yaml
+
+3. Create a static pod
+ssh node-name //ssh to the node to create the pod
+kubectl run static-busybox --image=busybox --dry-run=client -o yaml --command -- sleep 1000 > /etc/kubernetes/manifests/static-busybox.yaml
+kubectl run static-busybox --image=busybox --command sleep 1000 --dry-run=client -o yaml > /etc/kubernetes/manifests/stati
+c-busybox.yaml //use --dry-run=client to create a static pod, if no --dry-run=client,
+// the pod will not be static even if created in /etc/kubernetes/manifests
+(create a pod: kubectl run pod-name; kubectl create -f pod-name.yaml;
+create other resources: kubectl create deployment; service; configmap; secret; namespace; quota, and so on)
+
+4. Delete a static pod
+ssh node-name //ssh to the node to delete the pod
+ps aux | grep kubelet //find the --config path
+grep -i staticPodPath /path/config.yaml //find the staticPodPath containing the pod manifest file
+ls /staticPodPath //find the pod manifest file
+rm -f /staticPodPath/pod-manifest.yaml
+exit //exit this node and return to the default node
 
 
 
 # Priority Classes
+//Kubernetes automatically created two built-in PriorityClass objects: system-node-critical and system-cluster-critical
+kubectl get priorityclasses //get all priorityclasses
+//If you set the preemptionPolicy: PreemptLowerPriority, the pod with a higher value will evict the pod with a lower value
+//create a priority class
+kubectl create priorityclass high-priority --value=100000 --preemption-policy="PreemptLowerPriority" -o yaml > high-priority.yaml
+//create a pod with a priority class
+kubectl run low-prio-pod --image=nginx --dry-run=client -o yaml > low-prio-pod.yaml
+//then set the spec.priorityClassName: <priority-name>
+kubectl create -f low-prio-pod.yaml
+
+kubectl get pods -o custom-columns="NAME:.metadata.name,PRIORITY:.spec.priorityClassName" //check the priority class of all pods
+kubectl describe pod <pod-name> //get the details of a pod, including the priorityClassName
+
+//In the pod-name.yaml file, there might be a field spec.priority: <value>; adjust the value or replace it with priorityClassName: <name>
 
 
 
 # Multiple Schedulers
+kubectl get events -o wide
+kubectl logs my-custom-scheduler --namespace=kube-system
 
 
 # Configuring Scheduler Profiles
