@@ -254,14 +254,98 @@ kubectl describe pod <pod-name> //get the details of a pod, including the priori
 
 
 # Multiple Schedulers
+//Look under spec.containers[0].command and spec.volumes in the output of the Pod manifest file
+//to find the exact --kubeconfig or --config paths mounted into the container
+kubectl get pod -n kube-system -l component=kube-scheduler -o yaml //check the scheduler path
+//Usually, scheduler manifest file path: /etc/kubernetes/config/kube-scheduler.yaml
+//Add spec.schedulerName: <scheduler-name> to the pod manifest file
+
+//Check which scheduler picked up scheduling a particular pod
 kubectl get events -o wide
 kubectl logs my-custom-scheduler --namespace=kube-system
 
+//Create a scheduler using a Pod manifest file and spec.containers[0].command
+apiVersion: v1
+kind: Pod
+metadata:
+  name: my-scheduler
+  namespace: kube-system
+spec:
+  containers:
+  - name: kube-scheduler
+    image: k8s.gcr.io/kube-scheduler-amd64:v1.22.0
+    command:
+      - kube-scheduler
+      - --address=127.0.0.1
+      - --kubeconfig=/etc/kubernetes/scheduler.conf
+      - --config=/etc/kubernetes/my-scheduler-config.yaml
+
+//The scheduler config yaml with leaderElection
+apiVersion: kubescheduler.config.k8s.io/v1
+kind: KubeSchedulerConfiguration
+profiles:
+- schedulerName: my-scheduler
+leaderElection:
+  leaderElect: true
+  resourceNamespace: kube-system
+  resourceName: lock-object-my-scheduler
 
 # Configuring Scheduler Profiles
+kubectl describe node <node-name> //check the Unschedulable is true or false
+//Scheduler plugins:
+  Scheduling Queue: PrioritySort
+  Filtering: NodeResourcesFit, NodeName, NodeUnschedulable, TaintToleration, NodePorts, NodeAffinity
+  Scoring: NodeResourcesFit, ImageLocality, TaintToleration, NodeAffinity
+  Binding: DefaultBinder
+//Each pod is scheduled by one scheduler; if not defined in the pod yaml file, the pod is scheduled by the default scheduler
+//Set a customized scheduler to a pod, e.g.
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: custom-scheduled-pod
+spec:
+  schedulerName: my-scheduler
+  containers:
+  - name: app
+    image: nginx
+---
+
+//Turn off and turn on some plugins of a scheduler: e.g. score plugin
+---
+apiVersion: kubescheduler.config.k8s.io/v1
+kind: KubeSchedulerConfiguration
+profiles:
+  - schedulerName: default-scheduler
+    plugins:
+      score:
+        disabled:
+          - name: ImageLocality       # Disables scoring based on local container images
+          - name: PodTopologySpread   # Disables default topology spread scoring
+          # - name: "*"               # Use "*" to disable ALL default score plugins
+        enabled:
+          - name: NodeResourcesFit
+            weight: 2
+---
 
 
 # Admission Controllers
+kubelet --> Authentication --> Authorization --> Admission Controllers --> Create PVC
+kube-apiserver -h | grep enable-admission-plugins //View enabled Admission Controllers
+
+Admission Controllers:
+  AlwaysPullImages
+  DefaultStorageClass
+  EventRateLimit
+  NamespaceAutoProvision
+  NamespaceExists
+  Many more ...
+  MutatingAdmissionWebhook
+  ValidatingAdmissionWebhook
+
 
 
 # Validating and Mutating Admission Controllers
+kubectl describe pvc <pvc-name> //check the pvc
+//if spec.storageClassName is omitted in a PersistentVolumeClaim manifest file,
+//the default StorageClass will be assigned, spec.storageClassName: default
