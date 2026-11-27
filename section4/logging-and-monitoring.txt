@@ -1,0 +1,12 @@
+Section 4
+# Monitoring Cluster Components
+kubectl apply -f https://github.com/kubernetes-sigs/metrics-server/releases/latest/download/components.yaml //install metric-server
+kubectl top node //check the CPU and memory usage of the nodes
+kubectl top pod //check the CPU and memory usage of the pods
+
+
+
+# Managing Application Logs
+docker logs -f <container-id> //check the logs of a container in real-time (-f)
+kubectl logs -f <pod-name> //check the logs of the default container in the pod in real-time
+kubectl logs -f <pod-name> -c <container-name> //if more than one container is running in the pod, use the container name
