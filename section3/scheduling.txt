@@ -343,9 +343,32 @@ Admission Controllers:
   MutatingAdmissionWebhook
   ValidatingAdmissionWebhook
 
+//If imagePolicy: defaultAllow: false, the Webhook will reject images when the webhook backend is unavailable (fail-closed).
+//Configure API server with ImagePolicyWebhook:
+vi /etc/kubernetes/manifests/kube-apiserver.yaml //Edit the kube-apiserver.yaml file
+//Add ImagePolicyWebhook to the spec.containers.command.--enable-admission-plugins=NodeRestriction,ImagePolicyWebhook
+//Add admission-configuration to --admission-control-config-file flag;
+//spec.containers.command.--admission-control-config-file=/etc/kubernetes/imgvalidation/admission-configuration.yaml
+//Add imgvalidation volume mounted in kube-apiserver
+//spec.containers.volumeMounts: - mountPath: <path> name: <name> readOnly: true
+//spec.volumes.hostPath: path: <path> type: Directory spec.volumes.name: <name>
+
 
 
 # Validating and Mutating Admission Controllers
 kubectl describe pvc <pvc-name> //check the pvc
 //if spec.storageClassName is omitted in a PersistentVolumeClaim manifest file,
 //the default StorageClass will be assigned, spec.storageClassName: default
+
+//Create a TLS secret
+kubectl create secret tls <secret-name> --cert=<cert-path> --key=<key-path> -n <namespace>
+
+//Create a normal secret
+kubectl create secret generic <secret-name>
+
+cat path/webhook-configuration.yaml //Check the webhooks.rules.operations to find the pod operations influenced
+kubectl get mutatingwebhookconfigurations //Check all of the MutatingWebhookConfiguration
+
+kubectl get pod <pod-name> --show-managed-fields -o yaml //Kubernetes tracks which controller or webhook modified specific fields
+kubectl get pod <pod-name> -o yaml | grep -A 5 securityContext //Check the securityContext in the yaml file
+kubectl get pod <pod-name> -o yaml | grep -A 5 <field-name> //Check a field in the yaml file
